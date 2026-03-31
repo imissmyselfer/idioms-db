@@ -15,16 +15,21 @@ def scrape_idioms():
     
     conn = sqlite3.connect('idioms-db/idioms.db')
     cursor = conn.cursor()
-    cursor.execute('DROP TABLE IF EXISTS idioms')
+    # 移除 DROP TABLE，只在資料表不存在時建立
     cursor.execute('''
-        CREATE TABLE idioms (
+        CREATE TABLE IF NOT EXISTS idioms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             phonetic_initial TEXT NOT NULL,
             external_id TEXT NOT NULL,
-            is_main_entry BOOLEAN
+            is_main_entry BOOLEAN,
+            tag TEXT
         )
     ''')
+    
+    # 建立唯一索引，防止重複插入
+    cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_idiom_id ON idioms(external_id);')
+
     
     phonetic_initials = "ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙㄜㄞㄡㄢㄦㄧㄨㄩ"
     current_initial = ""
@@ -63,7 +68,7 @@ def scrape_idioms():
                         clean_name = idiom_name.replace("主", "")
                         
                         cursor.execute('''
-                            INSERT INTO idioms (name, phonetic_initial, external_id, is_main_entry)
+                            INSERT OR IGNORE INTO idioms (name, phonetic_initial, external_id, is_main_entry)
                             VALUES (?, ?, ?, ?)
                         ''', (clean_name, current_initial, external_id, is_main))
                         idioms_found += 1
